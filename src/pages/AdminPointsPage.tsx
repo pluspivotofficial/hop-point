@@ -26,7 +26,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
-import { Coins, Search, Pencil, Trash2, ChevronLeft, Users, MinusCircle } from "lucide-react";
+import { Coins, Search, Pencil, Trash2, ChevronLeft, Users, MinusCircle, PlusCircle, Ticket } from "lucide-react";
 
 interface Profile {
   user_id: string;
@@ -34,6 +34,7 @@ interface Profile {
   full_name: string | null;
   prefecture: string | null;
   phone_number: string | null;
+  referral_limit: number | null;
 }
 
 interface PointEntry {
@@ -52,6 +53,7 @@ interface UserSummary {
   full_name: string | null;
   prefecture: string | null;
   phone_number: string | null;
+  referral_limit: number | null;
   total_points: number;
   earn_points: number;
   spend_points: number;
@@ -83,6 +85,17 @@ const AdminPointsPage = () => {
   const [redeemDescription, setRedeemDescription] = useState<string>("ポイント換金");
   const [redeeming, setRedeeming] = useState(false);
 
+  // grant (give points) dialog
+  const [grantOpen, setGrantOpen] = useState(false);
+  const [grantPoints, setGrantPoints] = useState<string>("");
+  const [grantDescription, setGrantDescription] = useState<string>("");
+  const [granting, setGranting] = useState(false);
+
+  // invite-limit (referral_limit) dialog
+  const [limitOpen, setLimitOpen] = useState(false);
+  const [limitValue, setLimitValue] = useState<string>("");
+  const [savingLimit, setSavingLimit] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     supabase
@@ -95,7 +108,7 @@ const AdminPointsPage = () => {
   const fetchData = async () => {
     setLoading(true);
     const [{ data: profilesData }, { data: pointsData }] = await Promise.all([
-      supabase.from("profiles").select("user_id, display_name, full_name, prefecture, phone_number"),
+      supabase.from("profiles").select("user_id, display_name, full_name, prefecture, phone_number, referral_limit"),
       supabase.from("points_history").select("*").order("created_at", { ascending: false }).limit(5000),
     ]);
     if (profilesData) setProfiles(profilesData as Profile[]);
@@ -116,6 +129,7 @@ const AdminPointsPage = () => {
         full_name: p.full_name,
         prefecture: p.prefecture,
         phone_number: p.phone_number,
+        referral_limit: p.referral_limit,
         total_points: 0,
         earn_points: 0,
         spend_points: 0,
@@ -131,6 +145,7 @@ const AdminPointsPage = () => {
           full_name: null,
           prefecture: null,
           phone_number: null,
+          referral_limit: null,
           total_points: 0,
           earn_points: 0,
           spend_points: 0,
@@ -268,6 +283,76 @@ const AdminPointsPage = () => {
     setRedeeming(false);
   };
 
+  const openGrant = () => {
+    setGrantPoints("");
+    setGrantDescription("");
+    setGrantOpen(true);
+  };
+
+  const handleGrant = async () => {
+    if (!selectedUser) return;
+    const pts = Math.abs(Number(grantPoints));
+    if (!pts || Number.isNaN(pts)) {
+      toast({ title: "付与するポイントを入力してください", variant: "destructive" });
+      return;
+    }
+    if (!grantDescription.trim()) {
+      toast({ title: "付与理由を入力してください", variant: "destructive" });
+      return;
+    }
+    setGranting(true);
+    const { data, error } = await supabase
+      .from("points_history")
+      .insert({
+        user_id: selectedUser.user_id,
+        points: pts,
+        type: "adjust",
+        description: grantDescription.trim(),
+      })
+      .select()
+      .single();
+    if (error || !data) {
+      toast({ title: "付与エラー", description: error?.message, variant: "destructive" });
+      setGranting(false);
+      return;
+    }
+    setAllPoints((prev) => [data as PointEntry, ...prev]);
+    toast({ title: `${pts.toLocaleString()}pt を付与しました` });
+    setGrantOpen(false);
+    setGranting(false);
+  };
+
+  const openLimit = () => {
+    setLimitValue(String(selectedUser?.referral_limit ?? 5));
+    setLimitOpen(true);
+  };
+
+  const handleSaveLimit = async () => {
+    if (!selectedUser) return;
+    const next = Number(limitValue);
+    if (Number.isNaN(next) || next < 0) {
+      toast({ title: "0以上の数値を入力してください", variant: "destructive" });
+      return;
+    }
+    setSavingLimit(true);
+    const { data, error } = await supabase.rpc("admin_set_referral_limit", {
+      _user_id: selectedUser.user_id,
+      _limit: next,
+    });
+    if (error) {
+      toast({ title: "招待枠の更新エラー", description: error.message, variant: "destructive" });
+      setSavingLimit(false);
+      return;
+    }
+    const saved = typeof data === "number" ? data : next;
+    setProfiles((prev) =>
+      prev.map((p) => (p.user_id === selectedUser.user_id ? { ...p, referral_limit: saved } : p))
+    );
+    toast({ title: `招待枠を ${saved} 枠に更新しました` });
+    setLimitOpen(false);
+    setSavingLimit(false);
+  };
+
   if (isAdmin === null) {
     return (
       <AppLayout title="ポイント管理">
@@ -322,15 +407,39 @@ const AdminPointsPage = () => {
                 <p className="text-lg font-bold">{selectedUser.spend_points.toLocaleString()}</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full gap-2 text-destructive border-destructive/50 hover:bg-destructive/10"
-              onClick={openRedeem}
-            >
-              <MinusCircle className="h-4 w-4" />
-              ポイントを換金（減算）する
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-primary border-primary/50 hover:bg-primary/10"
+                onClick={openGrant}
+              >
+                <PlusCircle className="h-4 w-4" />
+                ポイント付与
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-destructive border-destructive/50 hover:bg-destructive/10"
+                onClick={openRedeem}
+              >
+                <MinusCircle className="h-4 w-4" />
+                換金（減算）
+              </Button>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+              <div className="flex items-center gap-2">
+                <Ticket className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">招待枠</p>
+                  <p className="text-sm font-bold">{selectedUser.referral_limit ?? 5} 枠</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="gap-1" onClick={openLimit}>
+                <Pencil className="h-3 w-3" />
+                変更
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -492,6 +601,100 @@ const AdminPointsPage = () => {
               </Button>
               <Button onClick={handleRedeem} disabled={redeeming} variant="destructive">
                 {redeeming ? "処理中..." : "減算する"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Grant (give points) Dialog */}
+        <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ポイント付与</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-muted text-sm">
+                <p className="text-xs text-muted-foreground">対象ユーザー</p>
+                <p className="font-medium">
+                  {selectedUser.display_name || selectedUser.full_name || "未設定"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  現在の残高:{" "}
+                  <span className="font-bold text-primary">
+                    {selectedUser.total_points.toLocaleString()}pt
+                  </span>
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="grant-points">付与するポイント</Label>
+                <Input
+                  id="grant-points"
+                  type="number"
+                  min="1"
+                  placeholder="例: 500"
+                  value={grantPoints}
+                  onChange={(e) => setGrantPoints(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="grant-desc">付与理由</Label>
+                <Input
+                  id="grant-desc"
+                  placeholder="例: イベント参加ボーナス"
+                  value={grantDescription}
+                  onChange={(e) => setGrantDescription(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setGrantOpen(false)} disabled={granting}>
+                キャンセル
+              </Button>
+              <Button onClick={handleGrant} disabled={granting}>
+                {granting ? "処理中..." : "付与する"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Invite-limit (referral_limit) Dialog */}
+        <Dialog open={limitOpen} onOpenChange={setLimitOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>招待枠の変更</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-muted text-sm">
+                <p className="text-xs text-muted-foreground">対象ユーザー</p>
+                <p className="font-medium">
+                  {selectedUser.display_name || selectedUser.full_name || "未設定"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  現在の招待枠:{" "}
+                  <span className="font-bold text-primary">{selectedUser.referral_limit ?? 5} 枠</span>
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="limit-value">招待枠（上限人数）</Label>
+                <Input
+                  id="limit-value"
+                  type="number"
+                  min="0"
+                  placeholder="例: 10"
+                  value={limitValue}
+                  onChange={(e) => setLimitValue(e.target.value)}
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  デフォルトは5枠。増枠すると、そのユーザーが作成できる招待リンクの上限が増えます。
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setLimitOpen(false)} disabled={savingLimit}>
+                キャンセル
+              </Button>
+              <Button onClick={handleSaveLimit} disabled={savingLimit}>
+                {savingLimit ? "保存中..." : "保存する"}
               </Button>
             </DialogFooter>
           </DialogContent>

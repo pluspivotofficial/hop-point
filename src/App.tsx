@@ -19,6 +19,9 @@ import AdminQuestionsPage from "./pages/AdminQuestionsPage";
 import AdminReferralsPage from "./pages/AdminReferralsPage";
 import AdminPointsPage from "./pages/AdminPointsPage";
 import AdminNoticesPage from "./pages/AdminNoticesPage";
+import AdminEventsPage from "./pages/AdminEventsPage";
+import EventsPage from "./pages/EventsPage";
+import EventDetailPage from "./pages/EventDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -57,7 +60,10 @@ const App = () => (
             <Route path="/column/:id" element={<ProtectedRoute><ColumnDetailPage /></ProtectedRoute>} />
             <Route path="/questions" element={<ProtectedRoute><QuestionsPage /></ProtectedRoute>} />
             <Route path="/questions/:id" element={<ProtectedRoute><QuestionDetailPage /></ProtectedRoute>} />
+            <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+            <Route path="/events/:id" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
             <Route path="/admin/columns" element={<ProtectedRoute><AdminColumnsPage /></ProtectedRoute>} />
+            <Route path="/admin/events" element={<ProtectedRoute><AdminEventsPage /></ProtectedRoute>} />
             <Route path="/admin/questions" element={<ProtectedRoute><AdminQuestionsPage /></ProtectedRoute>} />
             <Route path="/admin/referrals" element={<ProtectedRoute><AdminReferralsPage /></ProtectedRoute>} />
             <Route path="/admin/points" element={<ProtectedRoute><AdminPointsPage /></ProtectedRoute>} />
