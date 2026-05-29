@@ -20,6 +20,7 @@ function generateCode() {
 const ReferralPage = () => {
   const { user } = useAuth();
   const [referralCount, setReferralCount] = useState(0);
+  const [referralLimit, setReferralLimit] = useState(5);
   const [referrals, setReferrals] = useState<any[]>([]);
   const [referralPoints, setReferralPoints] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -27,6 +28,16 @@ const ReferralPage = () => {
 
   useEffect(() => {
     if (!user) return;
+    supabase
+      .from("profiles")
+      .select("referral_limit")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data && typeof data.referral_limit === "number") {
+          setReferralLimit(data.referral_limit);
+        }
+      });
     supabase
       .from("referrals")
       .select("*")
@@ -63,8 +74,8 @@ const ReferralPage = () => {
 
   const handleCreateLink = async () => {
     if (!user) return;
-    if (referralCount >= 5) {
-      toast({ title: "紹介上限に達しています", description: "紹介は5枠までです", variant: "destructive" });
+    if (referralCount >= referralLimit) {
+      toast({ title: "紹介上限に達しています", description: `紹介は${referralLimit}枠までです`, variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -151,25 +162,25 @@ const ReferralPage = () => {
             </div>
             <span className="text-sm">
               <strong className="text-2xl text-primary">{referralCount}</strong>
-              <span className="text-muted-foreground"> / 5 枠</span>
+              <span className="text-muted-foreground"> / {referralLimit} 枠</span>
             </span>
           </div>
           <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${
-                referralCount >= 5
+                referralCount >= referralLimit
                   ? "bg-destructive"
-                  : referralCount >= 4
+                  : referralCount >= referralLimit - 1
                   ? "bg-reward-gold"
                   : "bg-primary"
               }`}
-              style={{ width: `${Math.min((referralCount / 5) * 100, 100)}%` }}
+              style={{ width: `${Math.min((referralCount / referralLimit) * 100, 100)}%` }}
             />
           </div>
           <p className="text-[11px] text-muted-foreground mt-2 text-center">
-            {referralCount >= 5
+            {referralCount >= referralLimit
               ? "紹介上限に達しました"
-              : `あと ${5 - referralCount} 枠 紹介できます`}
+              : `あと ${referralLimit - referralCount} 枠 紹介できます`}
           </p>
         </CardContent>
       </Card>
@@ -212,9 +223,9 @@ const ReferralPage = () => {
             </div>
           </div>
 
-          <Button className="w-full gap-2" size="lg" disabled={submitting || referralCount >= 5} onClick={handleCreateLink}>
+          <Button className="w-full gap-2" size="lg" disabled={submitting || referralCount >= referralLimit} onClick={handleCreateLink}>
             <Link2 className="h-4 w-4" />
-            {referralCount >= 5 ? "紹介上限に達しました" : submitting ? "作成中..." : "招待リンクを作成してコピー"}
+            {referralCount >= referralLimit ? "紹介上限に達しました" : submitting ? "作成中..." : "招待リンクを作成してコピー"}
           </Button>
         </CardContent>
       </Card>

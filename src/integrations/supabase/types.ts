@@ -85,6 +85,54 @@ export type Database = {
         }
         Relationships: []
       }
+      event_reports: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          event_date: string | null
+          excerpt: string | null
+          id: string
+          is_published: boolean
+          published_at: string | null
+          region: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          youtube_url: string | null
+        }
+        Insert: {
+          author_id: string
+          content?: string
+          created_at?: string
+          event_date?: string | null
+          excerpt?: string | null
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          region?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          event_date?: string | null
+          excerpt?: string | null
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          region?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -338,6 +386,7 @@ export type Database = {
           phone_number: string | null
           prefecture: string | null
           preferred_shift: string | null
+          referral_limit: number
           updated_at: string
           user_id: string
           weekly_days: string | null
@@ -365,6 +414,7 @@ export type Database = {
           phone_number?: string | null
           prefecture?: string | null
           preferred_shift?: string | null
+          referral_limit?: number
           updated_at?: string
           user_id: string
           weekly_days?: string | null
@@ -392,6 +442,7 @@ export type Database = {
           phone_number?: string | null
           prefecture?: string | null
           preferred_shift?: string | null
+          referral_limit?: number
           updated_at?: string
           user_id?: string
           weekly_days?: string | null
@@ -631,6 +682,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_set_referral_limit: {
+        Args: { _limit: number; _user_id: string }
+        Returns: number
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

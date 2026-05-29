@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Coins, CalendarDays, Users, ExternalLink, TrendingUp, Clock, Megaphone, Gift, Sparkles, LogOut, MapPin, FileText, Settings, Trophy, CalendarCheck, Flame } from "lucide-react";
+import { Coins, CalendarDays, Users, ExternalLink, TrendingUp, Clock, Megaphone, Gift, Sparkles, LogOut, MapPin, FileText, Settings, Trophy, CalendarCheck, Flame, Video } from "lucide-react";
 import appLogo from "@/assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -277,6 +277,16 @@ const Dashboard = () => {
           </div>
         </Button>
 
+        <Button variant="outline" className="w-full justify-start gap-3 h-14 text-left" onClick={() => navigate("/events")}>
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Video className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm">イベントレポート</p>
+            <p className="text-xs text-muted-foreground">各地のイベントの様子を動画でチェック</p>
+          </div>
+        </Button>
+
         <a href="https://hop-kaigo.jp/register/seeker" target="_blank" rel="noopener noreferrer" className="block">
           <Button variant="outline" className="w-full justify-start gap-3 h-auto py-3 text-left whitespace-normal">
             <div className="h-9 w-9 rounded-lg bg-reward-gold/10 flex items-center justify-center flex-shrink-0">
@@ -415,6 +425,10 @@ const Dashboard = () => {
             <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/admin/notices")}>
               <Megaphone className="h-4 w-4" />
               お知らせ・キャンペーン管理
+            </Button>
+            <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate("/admin/events")}>
+              <Video className="h-4 w-4" />
+              イベントレポート管理
             </Button>
           </div>
         </>
